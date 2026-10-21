@@ -8,7 +8,8 @@
                                line describing it, exit 0. Run as a background job; its exit
                                is what wakes the supervisor. Re-arm after handling.
   fleet.py send ID [--guard] < message
-                               send stdin to a session with no shell in between. --guard
+                               send stdin to a session with no shell in between; exit 0 only
+                               when Happier confirms delivery (ok:true), 1 when it did not. --guard
                                refuses (exit 3) if someone already replied to the worker's
                                latest message: the user answered directly, and their answer wins.
   fleet.py archive ITEM [--session ID]
@@ -507,9 +508,11 @@ def send(session_id, guard):
         rc = answerable(session_id)
         if rc:
             return rc
-    r = subprocess.run([HAPPIER, "session", "send", session_id, text, "--json"], capture_output=True, text=True)
-    print((r.stdout or r.stderr).strip()[:300])
-    return r.returncode
+    # Through happier_call: delivered means exit 0 AND ok:true. Reading the exit status alone
+    # would report a zero-exit ok:false as sent, a silent drop for every relay (2026-10-21).
+    data, err = happier_call(["send", session_id, text])
+    print(f"sent: {json.dumps(data)[:240]}" if err is None else f"NOT sent: {err}")
+    return 0 if err is None else 1
 
 
 # ---------- catch-up ----------

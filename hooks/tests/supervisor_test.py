@@ -1232,7 +1232,7 @@ class Messaging(Base):
     def test_send_passes_worker_text_as_argv_and_never_executes_it(self):
         seen = []
         class R:
-            returncode, stdout, stderr = 0, "{}", ""
+            returncode, stdout, stderr = 0, '{"ok":true,"data":{}}', ""
         pwned = os.path.join(HOME, "pwned")
         with mock.patch.object(fleet.subprocess, "run", lambda args, **k: seen.append(args) or R()), \
              mock.patch.object(sys, "stdin", io.StringIO(f"relay: $(touch {pwned}) and `touch {pwned}2`")), \
@@ -1241,6 +1241,23 @@ class Messaging(Base):
         self.assertEqual(rc, 0)
         self.assertTrue(seen[0][4].startswith("relay: $(touch"))
         self.assertFalse(os.path.exists(pwned) or os.path.exists(pwned + "2"))
+
+    def test_send_reports_failure_unless_happier_confirms(self):
+        """2026-10-21: exit 0 with ok:false read as delivered, a silent drop."""
+        def runner(stdout, rc):
+            class R:
+                returncode, stderr = rc, ""
+            R.stdout = stdout
+            return lambda args, **k: R()
+        for stdout, rc, want in [('{"ok":true,"data":{"sessionId":"w"}}', 0, 0),
+                                 ('{"ok":false,"error":{"code":"session_not_found"}}', 0, 1),
+                                 ('{"ok":false,"error":{"code":"session_not_found"}}', 1, 1),
+                                 ("not json", 0, 1)]:
+            out = io.StringIO()
+            with mock.patch.object(fleet.subprocess, "run", runner(stdout, rc)), \
+                 mock.patch.object(sys, "stdin", io.StringIO("hello")), contextlib.redirect_stdout(out):
+                self.assertEqual(fleet.send("w", guard=False), want, stdout)
+            self.assertEqual(out.getvalue().startswith("sent:"), want == 0)
 
     def test_send_guard_refuses_when_the_user_already_answered(self):
         fleet.answerable = lambda sid: 3
