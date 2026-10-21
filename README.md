@@ -16,7 +16,9 @@ hooks/supervisor-event.sh         Notification + Stop: append each session's eve
 hooks/supervisor-plan-guard.sh    UserPromptSubmit: undo a plan mode a Happier resume caused
 hooks/guard-watch-untracked.sh    PreToolUse(Bash): block starting the watcher detached
 hooks/tests/                      shell + Python regression suites
-config/settings.snippet.json      the hook wiring to merge into ~/.claude/settings.json
+CLAUDE.md, AGENTS.md              the setup runbook for an AI agent installing this
+install.py                        safe, idempotent installer (tests in tests/install_test.py)
+config/settings.snippet.json      the hook wiring install.py merges into ~/.claude/settings.json
 config/gitignore.snippet          for a git-synced ~/.claude only
 ROADMAP.md                        how to build an equivalent system from scratch
 ```
@@ -52,23 +54,27 @@ ROADMAP.md                        how to build an equivalent system from scratch
 
 ## Install
 
+**The easy way:** open Claude Code (or Codex) in a clone of this repo and say "set this up for me". `CLAUDE.md` (and `AGENTS.md`, which points to it) is the agent's runbook. It checks prerequisites, runs the tests, installs, asks you three questions to write this machine's profile, and starts the supervisor.
+
+**By hand:**
+
 ```sh
-PKG=/path/to/agent-supervisor
-mkdir -p ~/.claude/skills ~/.claude/hooks/tests
-cp -R "$PKG/skills/supervisor" "$PKG/skills/hypervisor" "$PKG/skills/catchup" ~/.claude/skills/
-cp "$PKG"/hooks/*.sh ~/.claude/hooks/ && chmod +x ~/.claude/hooks/supervisor-*.sh ~/.claude/hooks/guard-watch-untracked.sh
-cp "$PKG"/hooks/tests/* ~/.claude/hooks/tests/
+git clone https://github.com/Jacob-Lasky/agent-supervisor && cd agent-supervisor
+python3 -I install.py --dry-run   # what it will add, update, back up and wire
+python3 -I install.py             # idempotent; backs up anything it replaces
 ```
+
+`install.py` copies the three skills and the hooks into `~/.claude` and merges the hook wiring from `config/settings.snippet.json` into `~/.claude/settings.json`. It appends to existing hook arrays and never removes anything. Anything it replaces is first copied to `~/.claude/backups/agent-supervisor-<timestamp>/`.
 
 Keep the directory names. The hooks, `ledger.py` and all three skills refer to `~/.claude/skills/supervisor/` and each other by path and name, so a renamed copy breaks quietly.
 
-**Wire the hooks.** Merge `config/settings.snippet.json` into `~/.claude/settings.json`: append each entry to the existing array for that event rather than replacing it. The two supervisor hooks are silent no-ops on any machine without `~/.claude/state/supervisor/`. The guard hook runs everywhere, but it only blocks a Bash command that starts `fleet.py watch` detached, so wiring all three everywhere is safe.
+The two supervisor hooks are silent no-ops on any machine without `~/.claude/state/supervisor/`. The guard hook runs everywhere, but it only blocks a Bash command that starts `fleet.py watch` detached, so wiring all three everywhere is safe.
 
 **Per machine:**
 
 1. `cp ~/.claude/skills/supervisor/profiles/example.md ~/.claude/skills/supervisor/profiles/<name>.md` and fill it in (host, worker permission mode, what this machine owns, routing to other machines, search, traps).
-2. `python3 -I ~/.claude/skills/supervisor/scripts/ledger.py init --profile <name>` (creates the state dir, which turns the hooks on, and the `~/supervisor` launcher).
-3. Start the supervisor as a Happier session in `~/supervisor`, following `<setup>` in `skills/supervisor/SKILL.md`, and talk to it from the Happier app.
+2. `python3 -I ~/.claude/skills/supervisor/scripts/ledger.py init --profile <name>` (creates the state dir, which turns the hooks on, and the `~/supervisor` launcher), then `ledger.py render` (writes this machine's published summary).
+3. Start the supervisor as a Happier session in `~/supervisor`, following `<setup>` in `skills/supervisor/SKILL.md`. Verify with `fleet.py snapshot`, then talk to it from the Happier app. `CLAUDE.md` has these steps with every command and check.
 
 **Hypervisor** (optional, one machine): create `~/hypervisor/CLAUDE.md` as described in `skills/hypervisor/SKILL.md` and start a Happier session there.
 
@@ -84,6 +90,7 @@ From the package (before installing) or from `~/.claude` (after). Each suite mak
 cd /path/to/agent-supervisor        # or: cd ~/.claude
 sh hooks/tests/supervisor-event.test.sh       # hook matrix + supervisor_test.py
 sh hooks/tests/guard-watch-untracked.test.sh  # guard hook matrix
+python3 -I tests/install_test.py              # the installer (from the repo only)
 ```
 
 From `~/.claude`, the one test of `config/gitignore.snippet` is skipped, since that file is not installed.

@@ -16,7 +16,7 @@ allowed-tools: Bash, Read, Write, Edit
 
 ## Install
 
-Copy this directory to `~/.claude/skills/supervisor/` (keep the name: the hooks, `ledger.py` and the three skills all refer to `~/.claude/skills/supervisor/` by path). Install the hooks and settings entries from the package README, then run `<setup>` below once per machine. Skills load in the NEXT Claude Code session, not the current one; confirm with `/help` in a new session.
+Install with the package's `install.py`, which puts this directory at `~/.claude/skills/supervisor/` (keep the name: the hooks, `ledger.py` and the three skills all refer to it by path) and wires the hooks. Then run `<setup>` below once per machine. Skills load in the NEXT Claude Code session, not the current one; confirm with `/help` in a new session.
 
 <objective>
 Be the single point of contact the user talks to on this machine. Keep every piece of work moving through worker sessions, keep an always-current picture of every session on the account, and spend the user's attention only on what genuinely needs them. Success: the user can ask "where does everything stand?" at any moment and get a true answer, workers never sit blocked on a question the supervisor could answer, and nothing reaches the user that they did not need to see.
