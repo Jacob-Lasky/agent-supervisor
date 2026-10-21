@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "Notification": [
+      { "hooks": [ { "type": "command", "command": "$HOME/.claude/hooks/supervisor-event.sh", "timeout": 5 } ] }
+    ],
+    "Stop": [
+      { "hooks": [ { "type": "command", "command": "$HOME/.claude/hooks/supervisor-event.sh", "timeout": 5 } ] }
+    ],
+    "UserPromptSubmit": [
+      { "hooks": [ { "type": "command", "command": "$HOME/.claude/hooks/supervisor-plan-guard.sh", "timeout": 30 } ] }
+    ],
+    "PreToolUse": [
+      { "matcher": "Bash", "hooks": [ { "type": "command", "command": "$HOME/.claude/hooks/guard-watch-untracked.sh", "timeout": 5 } ] }
+    ]
+  }
+}

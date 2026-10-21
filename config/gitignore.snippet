@@ -1,0 +1,6 @@
+# Add to ~/.claude/.gitignore ONLY if you sync ~/.claude through a private git repo.
+# The ledger, event log and watcher state are per-machine and must never leave the machine.
+state/
+# supervisors/<profile>.md IS tracked: it is each machine's published ledger summary, which
+# lets the other machines (and the hypervisor) read where its work stands. Its temp files are not.
+supervisors/*.tmp
